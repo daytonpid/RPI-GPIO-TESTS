@@ -1,6 +1,6 @@
 //Speed and period tester for Pi2-3 GPIO
 
-//todo DMA GPIO
+//Todo DMA GPIO
 
 #define BCM2708_PERI_BASE        0x3F000000
 #define GPIO_BASE                (BCM2708_PERI_BASE + 0x200000) /* GPIO controller */
@@ -20,7 +20,6 @@ void *gpio_map;
 
 // I/O access
 volatile unsigned *gpio;
-
 
 // GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y)
 #define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
@@ -49,16 +48,15 @@ int main(int argc, char **argv)
 
   while(1) {
     GPIO_SET = 1<<14;
-    nanosleep((const struct timespec[]){{0, 32000L}}, NULL);
+    nanosleep((const struct timespec[]){{0, 32000L}}, NULL); //sleep for 32us
     GPIO_CLR = 1<<14;
-    nanosleep((const struct timespec[]){{0, 32000L}}, NULL);
+    nanosleep((const struct timespec[]){{0, 32000L}}, NULL); //sleep for 32us
 
   }
-
+  
   return 0;
-
-} // main
-
+  
+}
 
 //
 // Set up a memory regions to access GPIO
@@ -92,4 +90,4 @@ void setup_io()
    gpio = (volatile unsigned *)gpio_map;
 
 
-} // setup_io
+}
