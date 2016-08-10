@@ -1,4 +1,6 @@
-//Speed and period tester for Pi2-3
+//Speed and period tester for Pi2-3 GPIO
+
+//todo DMA GPIO
 
 #define BCM2708_PERI_BASE        0x3F000000
 #define GPIO_BASE                (BCM2708_PERI_BASE + 0x200000) /* GPIO controller */
@@ -54,9 +56,10 @@ int main(int argc, char **argv)
 
   while(1) {
     GPIO_SET = 1<<14;
-    usleep(1);
+    nanosleep((const struct timespec[]){{0, 32000L}}, NULL);
     GPIO_CLR = 1<<14;
-    usleep(1);
+    nanosleep((const struct timespec[]){{0, 32000L}}, NULL);
+
   }
 
   return 0;
