@@ -42,14 +42,7 @@ int main(int argc, char **argv)
   // Set up gpi pointer for direct register access
   setup_io();
 
- /************************************************************************\
-  * You are about to change the GPIO settings of your computer.          *
-  * Mess this up and it will stop working!                               *
-  * It might be a good idea to 'sync' before running this program        *
-  * so at least you still have your code changes written to the SD-card! *
- \************************************************************************/
-
-// Set GPIO pin 4 to output
+// Set GPIO pin 14 to output
 
   INP_GPIO(14); // must use INP_GPIO before we can use OUT_GPIO
   OUT_GPIO(14);
