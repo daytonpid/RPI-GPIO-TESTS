@@ -9,6 +9,6 @@ http://abyz.co.uk/rpi/pigpio/download.html
 
 freq_count_1 example: 
 
-`sudo ./freq_count_1 14 -p32` This will create a 64us pulse on gpio 14
+`sudo ./freq_count_1 14 -p32` This will create a 64us square wave on gpio 14
 
-`sudo ./freq_count_1 4 14 15 -p32` this will create a 64us pulse on gpio 4, 14, and 15 
+`sudo ./freq_count_1 4 14 15 -p32` this will create a 64us square wave on gpio 4, 14, and 15 
