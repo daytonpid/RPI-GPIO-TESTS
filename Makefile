@@ -1,7 +1,11 @@
-CFLAGS=-O3 -W -Wall -std=c99 -D_XOPEN_SOURCE=500 -g
+CFLAGS=-O3 -W -Wall -std=c99 -g -lpigpio -lpthread
 
-test: test.o
+mhztest: mhztest.o
+
+freq_count_1: freq_count_1.o
+
+all: mhztest freq_count_1
 
 clean:
-	rm -f test *.o
+	rm -f mhztest freq_count_1 *.o
 
