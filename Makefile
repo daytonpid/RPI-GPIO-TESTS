@@ -1,11 +1,14 @@
-CFLAGS=-O3 -W -Wall -std=c99 -g -lpigpio -lpthread
+CC=gcc
+CFLAGS=-O3 -g
+LDFLAGS=-lpigpio -lpthread
+OBJECTS=freq_count_1.o
 
 mhztest: mhztest.o
 
-freq_count_1: freq_count_1.o
+freq_count_1: $(OBJECTS)
+        $(CC) $(CFLAGS) $(OBJECTS) -o freq_count_1 $(LDFLAGS)
 
 all: mhztest freq_count_1
 
 clean:
-	rm -f mhztest freq_count_1 *.o
-
+        rm -f mhztest freq_count_1 *.o
