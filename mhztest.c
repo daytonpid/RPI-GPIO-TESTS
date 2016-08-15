@@ -48,10 +48,7 @@ int main(int argc, char **argv)
 
   while(1) {
     GPIO_SET = 1<<14;
-    nanosleep((const struct timespec[]){{0, 32000L}}, NULL); //sleep for 32us
     GPIO_CLR = 1<<14;
-    nanosleep((const struct timespec[]){{0, 32000L}}, NULL); //sleep for 32us
-
   }
   
   return 0;
