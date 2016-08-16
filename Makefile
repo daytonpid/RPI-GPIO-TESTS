@@ -1,14 +1,14 @@
 CC=gcc
 CFLAGS=-O3 -g
 LDFLAGS=-lpigpio -lpthread
-OBJECTS=freq_count_1.o
 
-mhztest: mhztest.o
+busywait_test: busywait_test.o
+	$(CC) $(CFLAGS) busywait_test.o -o busywait_test
 
-freq_count_1: $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) -o freq_count_1 $(LDFLAGS)
+pigpio_pulse: pigpio_pulse.o
+	$(CC) $(CFLAGS) pigpio_pulse.o -o pigpio_pulse $(LDFLAGS)
 
-all: mhztest freq_count_1
+all: busywait_test pigpio_pulse
 
 clean:
-	rm -f mhztest freq_count_1 *.o
+	rm -f busywait_test pigpio_pulse *.o
