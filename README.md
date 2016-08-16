@@ -1,14 +1,13 @@
-RPI-GPIO-TESTS
+#RPI-GPIO-TESTS
 
-Run `make mhztest` for checking maximum supported gpio frequency on GPIO 14
+Run `make busywait_test` to check maximum supported busy wait speed on RPi2|3 on `GPIO 14` (you can change this in code)
 
-Run `make freq_count_1` for testing gpio pulse delay
+Run `make pigpio_pulse` to test pigpio GPIO square wave pulses on RPi
 
-Ensure that Pigpio is installed on your Pi before attempting to compile freq_count_1
-http://abyz.co.uk/rpi/pigpio/download.html
+Ensure that Pigpio is installed on your Pi before attempting to compile `pigpio_pulse`: http://abyz.co.uk/rpi/pigpio/download.html
 
-freq_count_1 example: 
+pigpio_pulse example: 
 
-`sudo ./freq_count_1 14 -p32` This will create a 64us square wave on gpio 14
+`sudo ./pigpio_pulse 14 -p32` This will create a 64us square wave on GPIO 14
 
-`sudo ./freq_count_1 4 14 15 -p32` this will create a 64us square wave on gpio 4, 14, and 15 
+`sudo ./pigpio_pulse 4 14 15 -p32` this will create a 64us square wave on GPIO 4, 14, and 15 
