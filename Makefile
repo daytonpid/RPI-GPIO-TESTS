@@ -1,14 +1,14 @@
 CC=gcc
-CFLAGS=-O3 -g
+CFLAGS=-O3
 LDFLAGS=-lpigpio -lpthread
 
 busywait_test: busywait_test.o
-	$(CC) $(CFLAGS) busywait_test.o -o busywait_test
+	$(CC) $(CFLAGS) busywait_test.o -o busywait_test $(LDFLAGS)
 
-pigpio_pulse: pigpio_pulse.o
-	$(CC) $(CFLAGS) pigpio_pulse.o -o pigpio_pulse $(LDFLAGS)
+led_test: led_test.o
+	$(CC) $(CFLAGS) led_test.o -o led_test
 
-all: busywait_test pigpio_pulse
+all: busywait_test led_test
 
 clean:
-	rm -f busywait_test pigpio_pulse *.o
+	rm -f busywait_test led_test *.o
