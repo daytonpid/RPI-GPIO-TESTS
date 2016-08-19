@@ -210,7 +210,6 @@ static int initOpts(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
    int i, rest, g, mode;
-   int count[MAX_GPIOS];
 
    /* Command line parameters */
    rest = initOpts(argc, argv);
@@ -232,7 +231,7 @@ int main(int argc, char *argv[])
    /* Unspecified GPIO */
    if (!g_num_gpios) fatal(1, "ERROR:\n\n    I can't turn on your LED's if you don't tell me which one to turn on .... d'ohhh!");
 
-   /* Initialize pigpio library */
+   /* Initialise GPIO */
    if (gpioInitialise() < 0)
    {
       fprintf(stderr, "ERROR:\n\n    pigpio failed to initialize .... good luck figuring out why! \n");
