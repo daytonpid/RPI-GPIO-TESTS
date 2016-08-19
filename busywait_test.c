@@ -1,103 +1,180 @@
-// This code proves that it is impossible to create a 64us pulse
-// with busy waits on the Rasperry Pi even with a voluntarily preemptive kernel
+// This code proves that it is possible to create a 64us pulse
+// with busy waits on the Rasperry Pi
 
-//	Dayton Pidhirney
-
-//Todo DMA GPIO
-
-#define BCM2708_PERI_BASE        0x3F000000 //RPi2|3 peripheral base offset
-#define GPIO_BASE                (BCM2708_PERI_BASE + 0x200000) /* GPIO controller */
+// Dayton Pidhirney
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <sys/mman.h>
+#include <stdarg.h>
 #include <unistd.h>
-#include <time.h>
+#include <pigpio.h>
 
-#define PAGE_SIZE (4*1024)
-#define BLOCK_SIZE (4*1024)
+#define MAX_GPIOS 32
 
-int  mem_fd;
-void *gpio_map;
+//-p flag constraints
+#define OPT_P_MIN 1
+#define OPT_P_MAX 1000
+#define OPT_P_DEF 32
 
-// I/O access
-volatile unsigned *gpio;
+static volatile int g_pulse_count[MAX_GPIOS];
+static volatile int g_reset_counts;
+static uint32_t g_mask;
 
-// GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x)
-#define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
-#define OUT_GPIO(g) *(gpio+((g)/10)) |=  (1<<(((g)%10)*3))
+static int g_num_gpios;
+static int g_gpio[MAX_GPIOS];
 
-#define GPIO_SET *(gpio+7)  // sets   bits which are 1 ignores bits which are 0
-#define GPIO_CLR *(gpio+10) // clears bits which are 1 ignores bits which are 0
+static int g_opt_p = OPT_P_DEF;
+static int g_opt_t = 0;
 
-void setup_io();
-
-int main(int argc, char **argv)
+void usage()
 {
-  // Set up gpi pointer for direct register access
-  setup_io();
-
-// Set GPIO pin 14 to output
-
-  INP_GPIO(14); // must use INP_GPIO before we can use OUT_GPIO
-  OUT_GPIO(14);
-
-  while(1) {
-    GPIO_SET = 1<<14;
-    microbusy(32); //wait 32us
-    GPIO_CLR = 1<<14;
-    microbusy(32); //wait 32us
-  }
-
-  return 0;
-
-}
-
-//
-// Set up a memory regions to access GPIO
-//
-void setup_io()
-{
-   /* open /dev/mem */
-   if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) {
-      printf("can't open /dev/mem \n");
-      exit(-1);
-   }
-
-   /* mmap GPIO */
-   gpio_map = mmap(
-      NULL,             //Any adddress in our space will do
-      BLOCK_SIZE,       //Map length
-      PROT_READ|PROT_WRITE,// Enable reading & writting to mapped memory
-      MAP_SHARED,       //Shared with other processes
-      mem_fd,           //File to map
-      GPIO_BASE         //Offset to GPIO peripheral
+   fprintf
+   (stderr,
+      "\n" \
+      "Usage: sudo ./busywait_test.c [GPIO VALUE] ... [OPTION] ...\n" \
+      "   -p value, sets pulses every given value in microseconds, %d-%d, TESTING only\n" \
+      "\nEXAMPLE\n" \
+      "sudo ./freq_count_1 14 4 7 -p32\n" \
+      "Monitor gpios 14, 4 and 7. Set pin 32us, then clear pin 32us later. This creates a 64\n" \
+      "\n",
+      OPT_P_MIN, OPT_P_MAX, OPT_P_DEF
    );
-
-   close(mem_fd); //No need to keep mem_fd open after mmap
-
-   if (gpio_map == MAP_FAILED) {
-      printf("mmap error %d\n", (int)gpio_map);//errno also set!
-      exit(-1);
-   }
-
-   // Always use volatile pointer!
-   gpio = (volatile unsigned *)gpio_map;
-
-
 }
 
-//microbusy function
-void microbusy(int microsec )
+void fatal(int show_usage, char *fmt, ...)
 {
-    struct timespec deadline;
-    clock_gettime(CLOCK_MONOTONIC, &deadline); //Get a monotonic time
-    deadline.tv_nsec += 1000;                  //Increase nsec by 1000 to match mircosec
-    if(deadline.tv_nsec >= 1000000000) {
-        deadline.tv_nsec -= 1000000000;
-	deadline.tv_sec++;
-    }
+   char buf[128];
+   va_list ap;
 
-    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, NULL); //Create the sleep function
+   va_start(ap, fmt);
+   vsnprintf(buf, sizeof(buf), fmt, ap);
+   va_end(ap);
+
+   fprintf(stderr, "%s\n", buf);
+
+   if (show_usage) usage();
+
+   fflush(stderr);
+
+   exit(EXIT_FAILURE);
+}
+
+static int initOpts(int argc, char *argv[])
+{
+   int i, opt;
+
+   while ((opt = getopt(argc, argv, ":p")) != -1)
+   {
+      i = -1;
+
+      switch (opt)
+      {
+         case 'p':
+            i = atoi(optarg);
+            if ((i >= OPT_P_MIN) && (i <= OPT_P_MAX))
+               g_opt_p = i;
+            else fatal(1, "invalid -p option (%d)", i);
+            g_opt_t = 1;
+            break;
+
+        default: /* '?' */
+           usage();
+           exit(-1);
+        }
+    }
+   return optind;
+}
+
+void edges(int gpio, int level, uint32_t tick)
+{
+   int g;
+
+   if (g_reset_counts)
+   {
+      g_reset_counts = 0;
+      for (g=0; g<MAX_GPIOS; g++) g_pulse_count[g] = 0;
+   }
+
+   /* only record low to high edges */
+   if (level == 1) g_pulse_count[gpio]++;
+}
+
+int main(int argc, char *argv[])
+{
+   int i, rest, g, wave_id, mode;
+   gpioPulse_t pulse[2];
+   int count[MAX_GPIOS];
+
+   /* command line parameters */
+
+   rest = initOpts(argc, argv);
+
+   /* get the gpios to monitor */
+
+   g_num_gpios = 0;
+
+   for (i=rest; i<argc; i++)
+   {
+      g = atoi(argv[i]);
+      if ((g>=0) && (g<32))
+      {
+         g_gpio[g_num_gpios++] = g;
+         g_mask |= (1<<g);
+      }
+      else fatal(1, "%d is not a valid g_gpio number\n", g);
+   }
+
+   if (!g_num_gpios) fatal(1, "At least one gpio must be specified");
+
+   printf("Monitoring gpios");
+   for (i=0; i<g_num_gpios; i++) printf(" %d", g_gpio[i]);
+   printf("\nPulse width in microseconds (%d)", g_opt_p);
+
+   if (gpioInitialise()<0) return 1;
+
+   gpioWaveClear();
+
+   pulse[0].gpioOn  = g_mask;
+   pulse[0].gpioOff = 0;
+   pulse[0].usDelay = g_opt_p;
+
+   pulse[1].gpioOn  = 0;
+   pulse[1].gpioOff = g_mask;
+   pulse[1].usDelay = g_opt_p;
+
+   gpioWaveAddGeneric(2, pulse);
+
+   wave_id = gpioWaveCreate();
+
+   /* monitor g_gpio level changes */
+
+   for (i=0; i<g_num_gpios; i++) gpioSetAlertFunc(g_gpio[i], edges);
+
+   mode = PI_INPUT;
+
+   if (g_opt_t)
+   {
+      gpioWaveTxSend(wave_id, PI_WAVE_MODE_REPEAT);
+      mode = PI_OUTPUT;
+   }
+
+   for (i=0; i<g_num_gpios; i++) gpioSetMode(g_gpio[i], mode);
+
+   while (1)
+   {
+      for (i=0; i<g_num_gpios; i++) count[i] = g_pulse_count[g_gpio[i]];
+
+      g_reset_counts = 1;
+
+      for (i=0; i<g_num_gpios; i++)
+      {
+         printf(" %d=%d", g_gpio[i], count[i]);
+      }
+
+      printf("\n");
+
+      gpioDelay(g_opt_p * 100000);
+   }
+
+   gpioTerminate();
 }
