@@ -63,7 +63,7 @@ static int initOpts(int argc, char *argv[])
 {
    int i, opt;
 
-   while ((opt = getopt(argc, argv, ":p")) != -1)
+   while ((opt = getopt(argc, argv, "p:")) != -1)
    {
       i = -1;
 
